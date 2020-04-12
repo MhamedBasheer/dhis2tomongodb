@@ -2,24 +2,27 @@ const mongoose = require('mongoose');
 var request = require('request');
 var options = {
   'method': 'GET',
-  'url': 'http://192.168.226.130:8877/api/organisationUnits?level=6&pageSize=5000',
+  'url': 'http://192.168.226.130:8877/api/organisationUnits?level=6&pageSize=5000', //replace the @ip:port by the cloud one or your local dhis2
   'headers': {
     'Authorization': 'Basic YW16YTpkaXN0cmljdA==',
     'Cookie': 'JSESSIONID=5D803149A98171F31BF324B88657347D'
   }
 };
 
-mongoose.connect('mongodb://127.0.0.1:27017/savics'); //No password used
+//MongoDb configuration
+var dbName = "rhies";
+mongoose.connect('mongodb://127.0.0.1:27017/'+dbName); //No password used
 
 var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'Connection error'));
 db.on('open', function(callback) {
-console.log('Connected to database.');
+console.log('Connected to database ' + dbName + '!');
 });
 
 var Schema = mongoose.Schema;
+var collection = "Facility";
 
-var facilitySchema = new Schema({
+var collectionSchema = new Schema({
   id: String,
   fosaCode: Number,
   name: String,
@@ -44,17 +47,18 @@ var facilitySchema = new Schema({
     altitude: String,
   }
 });
-var Facility = mongoose.model('Facility', facilitySchema);
+var Facility = mongoose.model(collection, collectionSchema);
+
+//End MongoDb configuration
+
 
 request(options, function (error, response) {
   if (error) throw new Error(error);
 
   var body = JSON.parse(response.body);
-  console.log(body.pager.total);
 
   function loopOrg(a,orgSize){
-    orgSize = body.pager.total;
-    if(a==orgSize){
+    if(a==body.pager.total){
       console.log(a +" organisations loaded");
       process.exit();
     }
@@ -71,7 +75,7 @@ request(options, function (error, response) {
         if (error) throw new Error(error);
         var body1 = JSON.parse(response1.body);
   
-        var NewFacilty = Facility({
+        var NewCollection = Facility({
           id: body1.id,
           name: body1.displayName,
           fosaCode: body1.code,
@@ -96,8 +100,8 @@ request(options, function (error, response) {
             altitude: body1.altitude,
           }
         });
-        console.log (NewFacilty);
-        NewFacilty.save(); //See error handling/confirmation in our Mongoose guide.	
+        console.log (NewCollection);
+        NewCollection.save();
         loopOrg(a+1);
       });  
     }
